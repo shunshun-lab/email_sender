@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: email-sender-app
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "cd email_sender && gunicorn src.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USERNAME
+        value: japanxcollege@gmail.com
+      - key: SMTP_PASSWORD
+        value: zuth dzji yfrn jbbd
+      - key: SENDER_EMAIL
+        value: japanxcollege@gmail.com
+      - key: SENDER_NAME
+        value: JapanXCollege
+      - key: FLASK_ENV
+        value: production 

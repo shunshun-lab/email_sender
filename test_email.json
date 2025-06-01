@@ -1,0 +1,20 @@
+{
+  "template_id": "sample_template",
+  "recipients": [
+    {
+      "name": "テストユーザー",
+      "email": "shun.taka.726@gmail.com",
+      "company": "テスト会社"
+    }
+  ],
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "username": "japanxcollege@gmail.com",
+    "password": "zuth dzji yfrn jbbd",
+    "sender_email": "japanxcollege@gmail.com",
+    "sender_name": "JapanXCollege",
+    "use_tls": true
+  },
+  "subject": "追跡ピクセルテスト"
+} 

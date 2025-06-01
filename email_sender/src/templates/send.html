@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メール送信 - メール送信・追跡システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+        }
+        .main-container {
+            margin-top: 20px;
+            margin-bottom: 80px;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            border-top: 1px solid #dee2e6;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+        }
+        .step.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .step.completed {
+            color: #198754;
+        }
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #dee2e6;
+            z-index: -1;
+        }
+        .step:last-child::after {
+            display: none;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            margin-bottom: 5px;
+        }
+        .step.active .step-number {
+            background-color: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+        .step.completed .step-number {
+            background-color: #198754;
+            color: white;
+            border-color: #198754;
+        }
+        .csv-preview {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .template-preview {
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">メール送信・追跡システム</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> ホーム</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/templates"><i class="bi bi-file-earmark-text"></i> テンプレート</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/send"><i class="bi bi-envelope"></i> メール送信</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tracking"><i class="bi bi-graph-up"></i> 追跡結果</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">メール送信</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="step-indicator">
+                            <div class="step active" id="step1">
+                                <div class="step-number">1</div>
+                                <div>CSVアップロード</div>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-number">2</div>
+                                <div>テンプレート選択</div>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-number">3</div>
+                                <div>SMTP設定</div>
+                            </div>
+                            <div class="step" id="step4">
+                                <div class="step-number">4</div>
+                                <div>確認・送信</div>
+                            </div>
+                        </div>
+
+                        <!-- ステップ1: CSVアップロード -->
+                        <div id="step1Content">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">CSVファイルのアップロード</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="csvUploadForm">
+                                        <div class="mb-3">
+                                            <label for="csvFile" class="form-label">CSVファイル</label>
+                                            <input class="form-control" type="file" id="csvFile" accept=".csv">
+                                            <div class="form-text">メールアドレスと個人情報を含むCSVファイルを選択してください。</div>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" id="uploadCsvBtn">
+                                            <i class="bi bi-upload"></i> アップロード
+                                        </button>
+                                    </form>
+
+                                    <div class="mt-4 d-none" id="csvPreviewContainer">
+                                        <h6>CSVプレビュー</h6>
+                                        <div class="table-responsive csv-preview">
+                                            <table class="table table-bordered table-striped table-sm">
+                                                <thead id="csvPreviewHeader">
+                                                    <!-- CSVヘッダーがここに表示されます -->
+                                                </thead>
+                                                <tbody id="csvPreviewBody">
+                                                    <!-- CSVデータがここに表示されます -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="mt-3">
+                                            <button type="button" class="btn btn-primary" id="nextToStep2Btn">
+                                                次へ <i class="bi bi-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ステップ2: テンプレート選択 -->
+                        <div id="step2Content" class="d-none">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">テンプレート選択</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="templateSelect" class="form-label">テンプレート</label>
+                                        <select class="form-select" id="templateSelect">
+                                            <option value="" selected>テンプレートを選択してください</option>
+                                            <!-- テンプレート一覧がここに表示されます -->
+                                        </select>
+                                    </div>
+
+                                    <div class="mt-4 d-none" id="templatePreviewContainer">
+                                        <h6>テンプレートプレビュー</h6>
+                                        <div class="mb-3">
+                                            <label class="form-label">件名</label>
+                                            <div class="form-control" id="templateSubjectPreview"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">本文</label>
+                                            <div class="template-preview" id="templateContentPreview"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3 d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" id="backToStep1Btn">
+                                            <i class="bi bi-arrow-left"></i> 戻る
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="nextToStep3Btn">
+                                            次へ <i class="bi bi-arrow-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ステップ3: SMTP設定 -->
+                        <div id="step3Content" class="d-none">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">SMTP設定</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="smtpForm">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="smtpHost" class="form-label">SMTPサーバー</label>
+                                                <input type="text" class="form-control" id="smtpHost" value="smtp.gmail.com" placeholder="例: smtp.gmail.com">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="smtpPort" class="form-label">ポート</label>
+                                                <input type="number" class="form-control" id="smtpPort" value="587" placeholder="例: 587">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="smtpUsername" class="form-label">ユーザー名</label>
+                                                <input type="text" class="form-control" id="smtpUsername" value="japanxcollege@gmail.com" placeholder="例: your.email@gmail.com">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="smtpPassword" class="form-label">パスワード</label>
+                                                <input type="password" class="form-control" id="smtpPassword" value="zuth dzji yfrn jbbd">
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="senderEmail" class="form-label">送信元メールアドレス</label>
+                                                <input type="email" class="form-control" id="senderEmail" value="japanxcollege@gmail.com" placeholder="例: your.email@gmail.com">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="senderName" class="form-label">送信者名</label>
+                                                <input type="text" class="form-control" id="senderName" value="JapanXCollege" placeholder="例: 山田太郎">
+                                            </div>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="useTls" checked>
+                                            <label class="form-check-label" for="useTls">
+                                                TLSを使用する
+                                            </label>
+                                        </div>
+                                    </form>
+
+                                    <div class="mt-3 d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" id="backToStep2Btn">
+                                            <i class="bi bi-arrow-left"></i> 戻る
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="nextToStep4Btn">
+                                            次へ <i class="bi bi-arrow-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ステップ4: 確認・送信 -->
+                        <div id="step4Content" class="d-none">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">確認・送信</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <h6><i class="bi bi-info-circle"></i> 送信内容の確認</h6>
+                                        <p>以下の内容でメールを送信します。内容を確認してください。</p>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">送信先</label>
+                                        <div class="form-control" id="recipientCountDisplay"></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">テンプレート</label>
+                                        <div class="form-control" id="templateNameDisplay"></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">SMTP設定</label>
+                                        <div class="form-control" id="smtpSettingsDisplay"></div>
+                                    </div>
+
+                                    <div class="mt-3 d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" id="backToStep3Btn">
+                                            <i class="bi bi-arrow-left"></i> 戻る
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="sendEmailsBtn">
+                                            <i class="bi bi-envelope"></i> メール送信
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 送信結果モーダル -->
+    <div class="modal fade" id="sendResultModal" tabindex="-1" aria-labelledby="sendResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sendResultModalLabel">送信結果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="sendResultContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                    <a href="/tracking" class="btn btn-primary">追跡結果を確認</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 メール送信・追跡システム</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let csvData = null;
+        let selectedTemplate = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // テンプレート一覧を読み込み
+            loadTemplates();
+
+            // ステップ間の移動
+            document.getElementById('nextToStep2Btn').addEventListener('click', function() {
+                if (!csvData) {
+                    alert('CSVファイルをアップロードしてください');
+                    return;
+                }
+                document.getElementById('step1Content').classList.add('d-none');
+                document.getElementById('step2Content').classList.remove('d-none');
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('active');
+            });
+
+            document.getElementById('backToStep1Btn').addEventListener('click', function() {
+                document.getElementById('step2Content').classList.add('d-none');
+                document.getElementById('step1Content').classList.remove('d-none');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step1').classList.remove('completed');
+                document.getElementById('step1').classList.add('active');
+            });
+
+            document.getElementById('nextToStep3Btn').addEventListener('click', function() {
+                if (!selectedTemplate) {
+                    alert('テンプレートを選択してください');
+                    return;
+                }
+                document.getElementById('step2Content').classList.add('d-none');
+                document.getElementById('step3Content').classList.remove('d-none');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step2').classList.add('completed');
+                document.getElementById('step3').classList.add('active');
+            });
+
+            document.getElementById('backToStep2Btn').addEventListener('click', function() {
+                document.getElementById('step3Content').classList.add('d-none');
+                document.getElementById('step2Content').classList.remove('d-none');
+                document.getElementById('step3').classList.remove('active');
+                document.getElementById('step2').classList.remove('completed');
+                document.getElementById('step2').classList.add('active');
+            });
+
+            document.getElementById('nextToStep4Btn').addEventListener('click', function() {
+                if (!validateSMTPForm()) {
+                    alert('SMTP設定を正しく入力してください');
+                    return;
+                }
+                document.getElementById('step3Content').classList.add('d-none');
+                document.getElementById('step4Content').classList.remove('d-none');
+                document.getElementById('step3').classList.remove('active');
+                document.getElementById('step3').classList.add('completed');
+                document.getElementById('step4').classList.add('active');
+                
+                // 確認画面の表示内容を更新
+                updateConfirmationDisplay();
+            });
+
+            document.getElementById('backToStep3Btn').addEventListener('click', function() {
+                document.getElementById('step4Content').classList.add('d-none');
+                document.getElementById('step3Content').classList.remove('d-none');
+                document.getElementById('step4').classList.remove('active');
+                document.getElementById('step3').classList.remove('completed');
+                document.getElementById('step3').classList.add('active');
+            });
+
+            // CSVアップロードボタンのイベント
+            document.getElementById('uploadCsvBtn').addEventListener('click', function() {
+                const fileInput = document.getElementById('csvFile');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('CSVファイルを選択してください');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                fetch('/api/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        csvData = data;
+                        displayCSVPreview(data);
+                        document.getElementById('csvPreviewContainer').classList.remove('d-none');
+                    } else {
+                        alert('エラー: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('CSVファイルのアップロードに失敗しました');
+                });
+            });
+
+            // テンプレート選択のイベント
+            document.getElementById('templateSelect').addEventListener('change', function() {
+                const selectedTemplateId = this.value;
+                if (!selectedTemplateId) {
+                    document.getElementById('templatePreviewContainer').classList.add('d-none');
+                    selectedTemplate = null;
+                    return;
+                }
+
+                // 選択されたテンプレートを取得
+                fetch('/api/templates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const template = data.templates.find(t => t.id === selectedTemplateId);
+                        if (template) {
+                            selectedTemplate = template;
+                            displayTemplatePreview(template);
+                            document.getElementById('templatePreviewContainer').classList.remove('d-none');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('テンプレートの取得に失敗しました');
+                });
+            });
+
+            // メール送信ボタンのイベント
+            document.getElementById('sendEmailsBtn').addEventListener('click', function() {
+                sendEmails();
+            });
+        });
+
+        function loadTemplates() {
+            fetch('/api/templates')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const templateSelect = document.getElementById('templateSelect');
+                    templateSelect.innerHTML = '<option value="" selected>テンプレートを選択してください</option>';
+                    
+                    data.templates.forEach(template => {
+                        const option = document.createElement('option');
+                        option.value = template.id;
+                        option.textContent = template.name;
+                        templateSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading templates:', error);
+            });
+        }
+
+        function displayCSVPreview(data) {
+            const csvPreviewHeader = document.getElementById('csvPreviewHeader');
+            const csvPreviewBody = document.getElementById('csvPreviewBody');
+            
+            // ヘッダー行を作成
+            const headerRow = document.createElement('tr');
+            data.headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                if (header === data.email_column) {
+                    th.style.backgroundColor = '#e3f2fd';
+                    th.innerHTML += ' <i class="bi bi-envelope text-primary"></i>';
+                }
+                headerRow.appendChild(th);
+            });
+            csvPreviewHeader.innerHTML = '';
+            csvPreviewHeader.appendChild(headerRow);
+            
+            // データ行を作成
+            csvPreviewBody.innerHTML = '';
+            data.rows.forEach(row => {
+                const tr = document.createElement('tr');
+                data.headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = row[header] || '';
+                    if (header === data.email_column) {
+                        td.style.backgroundColor = '#f8f9fa';
+                    }
+                    tr.appendChild(td);
+                });
+                csvPreviewBody.appendChild(tr);
+            });
+        }
+
+        function displayTemplatePreview(template) {
+            document.getElementById('templateSubjectPreview').textContent = template.subject;
+            
+            // CSVデータがある場合は変数を置換してプレビュー
+            let previewContent = template.content;
+            if (csvData && csvData.rows.length > 0) {
+                const sampleRow = csvData.rows[0];
+                csvData.headers.forEach(header => {
+                    const placeholder = `[${header}]`;
+                    const value = sampleRow[header] || '';
+                    previewContent = previewContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+                });
+            }
+            
+            document.getElementById('templateContentPreview').innerHTML = previewContent;
+        }
+
+        function validateSMTPForm() {
+            const requiredFields = ['smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'senderEmail', 'senderName'];
+            return requiredFields.every(fieldId => {
+                const field = document.getElementById(fieldId);
+                return field && field.value.trim() !== '';
+            });
+        }
+
+        function updateConfirmationDisplay() {
+            if (csvData) {
+                document.getElementById('recipientCountDisplay').textContent = `${csvData.total_count}件`;
+            }
+            if (selectedTemplate) {
+                document.getElementById('templateNameDisplay').textContent = selectedTemplate.name;
+            }
+            
+            const smtpHost = document.getElementById('smtpHost').value;
+            const smtpPort = document.getElementById('smtpPort').value;
+            const smtpUsername = document.getElementById('smtpUsername').value;
+            document.getElementById('smtpSettingsDisplay').textContent = `${smtpHost}:${smtpPort} (${smtpUsername})`;
+        }
+
+        function sendEmails() {
+            if (!csvData || !selectedTemplate) {
+                alert('CSVデータまたはテンプレートが選択されていません');
+                return;
+            }
+
+            const smtpConfig = {
+                host: document.getElementById('smtpHost').value,
+                port: document.getElementById('smtpPort').value,
+                username: document.getElementById('smtpUsername').value,
+                password: document.getElementById('smtpPassword').value,
+                sender_email: document.getElementById('senderEmail').value,
+                sender_name: document.getElementById('senderName').value,
+                use_tls: document.getElementById('useTls').checked
+            };
+
+            const emailData = {
+                template_id: selectedTemplate.id,
+                recipients: csvData.rows,
+                smtp: smtpConfig
+            };
+
+            fetch('/api/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(emailData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displaySendResults(data.results);
+                } else {
+                    alert('エラー: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('メール送信に失敗しました');
+            });
+        }
+
+        function displaySendResults(results) {
+            let successCount = 0;
+            let failedCount = 0;
+            let resultHtml = '';
+
+            results.forEach(result => {
+                if (result.status === 'sent') {
+                    successCount++;
+                } else {
+                    failedCount++;
+                }
+            });
+
+            if (successCount > 0) {
+                resultHtml += `
+                    <div class="alert alert-success">
+                        <h6><i class="bi bi-check-circle"></i> 送信完了</h6>
+                        <p>${successCount}件のメールを送信しました。</p>
+                    </div>
+                `;
+            }
+
+            if (failedCount > 0) {
+                resultHtml += `
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle"></i> 送信失敗</h6>
+                        <p>${failedCount}件のメールの送信に失敗しました。</p>
+                    </div>
+                `;
+            }
+
+            resultHtml += `
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>メールアドレス</th>
+                            <th>ステータス</th>
+                            <th>追跡ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            results.forEach(result => {
+                const statusBadge = result.status === 'sent' 
+                    ? '<span class="badge bg-success">送信成功</span>'
+                    : '<span class="badge bg-danger">送信失敗</span>';
+                
+                resultHtml += `
+                    <tr>
+                        <td>${result.email}</td>
+                        <td>${statusBadge}</td>
+                        <td>${result.tracking_id || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            resultHtml += `
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('sendResultContent').innerHTML = resultHtml;
+            const sendResultModal = new bootstrap.Modal(document.getElementById('sendResultModal'));
+            sendResultModal.show();
+        }
+    </script>
+</body>
+</html>

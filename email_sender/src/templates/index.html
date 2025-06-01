@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メール送信・追跡システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+        }
+        .main-container {
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+        }
+        .step.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .step.completed {
+            color: #198754;
+        }
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #dee2e6;
+            z-index: -1;
+        }
+        .step:last-child::after {
+            display: none;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            margin-bottom: 5px;
+        }
+        .step.active .step-number {
+            background-color: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+        .step.completed .step-number {
+            background-color: #198754;
+            color: white;
+            border-color: #198754;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">メール送信・追跡システム</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class="bi bi-house-door"></i> ホーム</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/templates"><i class="bi bi-file-earmark-text"></i> テンプレート</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/send"><i class="bi bi-envelope"></i> メール送信</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tracking"><i class="bi bi-graph-up"></i> 追跡結果</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">メール送信・追跡システムへようこそ</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>このシステムでは、CSVファイルからメールアドレスと個人情報を読み込み、テンプレートを使用してパーソナライズされたメールを送信し、開封状況を追跡することができます。</p>
+                        
+                        <div class="step-indicator">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div>CSVアップロード</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div>テンプレート作成</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div>SMTP設定</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div>メール送信</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">5</div>
+                                <div>結果確認</div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-earmark-spreadsheet" style="font-size: 2rem; color: #0d6efd;"></i>
+                                        <h5 class="card-title mt-3">CSVファイルのアップロード</h5>
+                                        <p class="card-text">メールアドレスと個人情報を含むCSVファイルをアップロードします。</p>
+                                        <a href="/send" class="btn btn-primary">開始する</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-earmark-text" style="font-size: 2rem; color: #0d6efd;"></i>
+                                        <h5 class="card-title mt-3">テンプレート管理</h5>
+                                        <p class="card-text">メールテンプレートを作成・編集し、変数を設定します。</p>
+                                        <a href="/templates" class="btn btn-primary">テンプレート管理</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-graph-up" style="font-size: 2rem; color: #0d6efd;"></i>
+                                        <h5 class="card-title mt-3">送信結果の追跡</h5>
+                                        <p class="card-text">送信したメールの開封状況や配信状況を確認します。</p>
+                                        <a href="/tracking" class="btn btn-primary">追跡結果を見る</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 メール送信・追跡システム</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

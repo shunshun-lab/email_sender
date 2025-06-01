@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テンプレート管理 - メール送信・追跡システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+        }
+        .main-container {
+            margin-top: 20px;
+            margin-bottom: 80px;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            border-top: 1px solid #dee2e6;
+        }
+        .template-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .variable-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            font-size: 0.9rem;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .variable-badge:hover {
+            background-color: #dee2e6;
+        }
+        #templateEditor {
+            min-height: 300px;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">メール送信・追跡システム</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> ホーム</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/templates"><i class="bi bi-file-earmark-text"></i> テンプレート</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/send"><i class="bi bi-envelope"></i> メール送信</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tracking"><i class="bi bi-graph-up"></i> 追跡結果</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">テンプレート管理</h5>
+                        <button class="btn btn-primary btn-sm" id="newTemplateBtn">
+                            <i class="bi bi-plus-circle"></i> 新規テンプレート
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">テンプレート一覧</h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="list-group template-list" id="templateList">
+                                            <!-- テンプレート一覧がここに表示されます -->
+                                            <a href="#" class="list-group-item list-group-item-action template-item d-none">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1 template-subject">テンプレート件名</h6>
+                                                    <small class="text-muted template-date">2025/05/29</small>
+                                                </div>
+                                                <small class="template-variables">変数: [名前], [住所]</small>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">テンプレート編集</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="templateForm">
+                                            <input type="hidden" id="templateId">
+                                            <div class="mb-3">
+                                                <label for="templateName" class="form-label">テンプレート名</label>
+                                                <input type="text" class="form-control" id="templateName" placeholder="テンプレートの名前">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="subject" class="form-label">件名</label>
+                                                <input type="text" class="form-control" id="subject" placeholder="メールの件名">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">変数</label>
+                                                <div id="variableBadges" class="mb-2">
+                                                    <!-- 変数バッジがここに表示されます -->
+                                                </div>
+                                                <small class="text-muted">※ CSVの列名を[列名]の形式で使用できます。例: [名前], [住所]</small>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="templateEditor" class="form-label">本文</label>
+                                                <div id="templateEditor" contenteditable="true" class="form-control"></div>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <button type="button" class="btn btn-primary" id="saveTemplateBtn">
+                                                    <i class="bi bi-save"></i> 保存
+                                                </button>
+                                                <button type="button" class="btn btn-secondary" id="previewTemplateBtn">
+                                                    <i class="bi bi-eye"></i> プレビュー
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビューモーダル -->
+    <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="previewModalLabel">テンプレートプレビュー</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">件名プレビュー</label>
+                        <div class="form-control" id="previewSubject"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">本文プレビュー</label>
+                        <div class="border p-3" id="previewContent"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- テンプレート編集モーダル -->
+    <div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templateModalLabel">テンプレート編集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="modalTemplateForm">
+                        <input type="hidden" id="modalTemplateId">
+                        <div class="mb-3">
+                            <label for="modalTemplateName" class="form-label">テンプレート名</label>
+                            <input type="text" class="form-control" id="modalTemplateName" placeholder="テンプレートの名前">
+                        </div>
+                        <div class="mb-3">
+                            <label for="modalSubject" class="form-label">件名</label>
+                            <input type="text" class="form-control" id="modalSubject" placeholder="メールの件名">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">変数</label>
+                            <div id="modalVariableBadges" class="mb-2">
+                                <!-- 変数バッジがここに表示されます -->
+                            </div>
+                            <small class="text-muted">※ CSVの列名を[列名]の形式で使用できます。例: [名前], [住所]</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modalTemplateEditor" class="form-label">本文</label>
+                            <div id="modalTemplateEditor" contenteditable="true" class="form-control" style="min-height: 200px;"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="modalSaveTemplateBtn">
+                        <i class="bi bi-save"></i> 保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 メール送信・追跡システム</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // テンプレート一覧の取得
+            function loadTemplates() {
+                fetch('/api/templates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayTemplates(data.templates);
+                    } else {
+                        console.error('Error loading templates:', data.error);
+                        const templateList = document.getElementById('templateList');
+                        templateList.innerHTML = '<div class="p-3 text-center text-muted">テンプレートの読み込みに失敗しました</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    const templateList = document.getElementById('templateList');
+                    templateList.innerHTML = '<div class="p-3 text-center text-muted">テンプレートの読み込みに失敗しました</div>';
+                });
+            }
+
+            function displayTemplates(templates) {
+                const templateList = document.getElementById('templateList');
+                
+                if (templates.length === 0) {
+                    templateList.innerHTML = '<div class="p-3 text-center text-muted">テンプレートがありません</div>';
+                    return;
+                }
+
+                let html = '';
+                templates.forEach(template => {
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title">${escapeHtml(template.name)}</h6>
+                                        <p class="card-text text-muted mb-2">件名: ${escapeHtml(template.subject)}</p>
+                                        <p class="card-text small text-muted">${escapeHtml(template.content.substring(0, 100))}${template.content.length > 100 ? '...' : ''}</p>
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editTemplate('${template.id}')">
+                                            <i class="bi bi-pencil"></i> 編集
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteTemplate('${template.id}')">
+                                            <i class="bi bi-trash"></i> 削除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                templateList.innerHTML = html;
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // テンプレート編集
+            window.editTemplate = function(templateId) {
+                fetch('/api/templates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const template = data.templates.find(t => t.id === templateId);
+                        if (template) {
+                            document.getElementById('modalTemplateId').value = template.id;
+                            document.getElementById('modalTemplateName').value = template.name;
+                            document.getElementById('modalSubject').value = template.subject;
+                            document.getElementById('modalTemplateEditor').innerHTML = template.content;
+                            
+                            // 変数を抽出して表示
+                            extractVariables(template.content, 'modalVariableBadges');
+                            
+                            // モーダルタイトルを変更
+                            document.getElementById('templateModalLabel').textContent = 'テンプレート編集';
+                            
+                            // モーダルを表示
+                            const templateModal = new bootstrap.Modal(document.getElementById('templateModal'));
+                            templateModal.show();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('テンプレートの読み込みに失敗しました');
+                });
+            };
+
+            // テンプレート削除
+            window.deleteTemplate = function(templateId) {
+                if (!confirm('このテンプレートを削除しますか？')) {
+                    return;
+                }
+
+                // 削除APIを実装する場合はここに追加
+                alert('削除機能は未実装です');
+            };
+
+            // 変数抽出
+            function extractVariables(content, targetElementId = 'variableBadges') {
+                const variableRegex = /\[([^\]]+)\]/g;
+                const variables = new Set();
+                let match;
+                
+                while ((match = variableRegex.exec(content)) !== null) {
+                    variables.add(match[1]);
+                }
+
+                const variableBadges = document.getElementById(targetElementId);
+                if (variables.size > 0) {
+                    let badgeHtml = '';
+                    variables.forEach(variable => {
+                        badgeHtml += `<span class="badge bg-secondary me-1 mb-1">[${escapeHtml(variable)}]</span>`;
+                    });
+                    variableBadges.innerHTML = badgeHtml;
+                } else {
+                    variableBadges.innerHTML = '<span class="text-muted">変数が見つかりません</span>';
+                }
+            }
+
+            // 新規テンプレートボタンのイベント
+            document.getElementById('newTemplateBtn').addEventListener('click', function() {
+                document.getElementById('modalTemplateId').value = '';
+                document.getElementById('modalTemplateName').value = '';
+                document.getElementById('modalSubject').value = '';
+                document.getElementById('modalTemplateEditor').innerHTML = '';
+                document.getElementById('modalVariableBadges').innerHTML = '';
+                
+                // モーダルタイトルを変更
+                document.getElementById('templateModalLabel').textContent = '新規テンプレート';
+                
+                // モーダルを表示
+                const templateModal = new bootstrap.Modal(document.getElementById('templateModal'));
+                templateModal.show();
+            });
+
+            // モーダルのテンプレート保存ボタンのイベント
+            document.getElementById('modalSaveTemplateBtn').addEventListener('click', function() {
+                const templateName = document.getElementById('modalTemplateName').value.trim();
+                const subject = document.getElementById('modalSubject').value.trim();
+                const content = document.getElementById('modalTemplateEditor').innerHTML.trim();
+
+                if (!templateName) {
+                    alert('テンプレート名を入力してください');
+                    return;
+                }
+
+                if (!subject) {
+                    alert('件名を入力してください');
+                    return;
+                }
+
+                if (!content) {
+                    alert('本文を入力してください');
+                    return;
+                }
+
+                const templateData = {
+                    name: templateName,
+                    subject: subject,
+                    content: content
+                };
+
+                fetch('/api/templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(templateData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('テンプレートを保存しました');
+                        loadTemplates();
+                        
+                        // モーダルを閉じる
+                        const templateModal = bootstrap.Modal.getInstance(document.getElementById('templateModal'));
+                        if (templateModal) {
+                            templateModal.hide();
+                        }
+                    } else {
+                        alert('エラー: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('テンプレートの保存に失敗しました');
+                });
+            });
+
+            // テンプレート保存ボタンのイベント（メインフォーム用）
+            document.getElementById('saveTemplateBtn').addEventListener('click', function() {
+                const templateName = document.getElementById('templateName').value.trim();
+                const subject = document.getElementById('subject').value.trim();
+                const content = document.getElementById('templateEditor').innerHTML.trim();
+
+                if (!templateName) {
+                    alert('テンプレート名を入力してください');
+                    return;
+                }
+
+                if (!subject) {
+                    alert('件名を入力してください');
+                    return;
+                }
+
+                if (!content) {
+                    alert('本文を入力してください');
+                    return;
+                }
+
+                const templateData = {
+                    name: templateName,
+                    subject: subject,
+                    content: content
+                };
+
+                fetch('/api/templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(templateData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('テンプレートを保存しました');
+                        loadTemplates();
+                    } else {
+                        alert('エラー: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('テンプレートの保存に失敗しました');
+                });
+            });
+
+            // プレビューボタンのイベント
+            document.getElementById('previewTemplateBtn').addEventListener('click', function() {
+                const subject = document.getElementById('subject').value;
+                const content = document.getElementById('templateEditor').innerHTML;
+
+                document.getElementById('previewSubject').textContent = subject;
+                document.getElementById('previewContent').innerHTML = content;
+
+                const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+                previewModal.show();
+            });
+
+            // テンプレートエディタの変更を監視して変数を抽出
+            document.getElementById('templateEditor').addEventListener('input', function() {
+                extractVariables(this.innerHTML);
+            });
+
+            // モーダルのテンプレートエディタの変更を監視して変数を抽出
+            document.getElementById('modalTemplateEditor').addEventListener('input', function() {
+                extractVariables(this.innerHTML, 'modalVariableBadges');
+            });
+
+            // 初期化
+            loadTemplates();
+        });
+    </script>
+</body>
+</html>

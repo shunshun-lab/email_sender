@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追跡結果 - メール送信・追跡システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 5px;
+        }
+        .main-container {
+            margin-top: 20px;
+            margin-bottom: 80px;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            border-top: 1px solid #dee2e6;
+        }
+        .tracking-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            margin: 0 10px;
+            text-align: center;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .stat-card h3 {
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+        .stat-card p {
+            margin-bottom: 0;
+            color: #6c757d;
+        }
+        .stat-sent {
+            background-color: #e9ecef;
+        }
+        .stat-opened {
+            background-color: #d1e7dd;
+        }
+        .stat-failed {
+            background-color: #f8d7da;
+        }
+        .tracking-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        /* ローディングアニメーション */
+        .rotating {
+            animation: rotate 1s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">メール送信・追跡システム</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> ホーム</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/templates"><i class="bi bi-file-earmark-text"></i> テンプレート</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/send"><i class="bi bi-envelope"></i> メール送信</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/tracking"><i class="bi bi-graph-up"></i> 追跡結果</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">メール追跡結果</h5>
+                        <button class="btn btn-primary btn-sm" id="refreshBtn">
+                            <i class="bi bi-arrow-clockwise"></i> 更新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="tracking-stats">
+                            <div class="stat-card stat-sent">
+                                <h3 id="sentCount">0</h3>
+                                <p>送信済み</p>
+                            </div>
+                            <div class="stat-card stat-opened">
+                                <h3 id="openedCount">0</h3>
+                                <p>開封済み</p>
+                            </div>
+                            <div class="stat-card stat-failed">
+                                <h3 id="failedCount">0</h3>
+                                <p>失敗</p>
+                            </div>
+                        </div>
+
+                        <div class="tracking-table">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>メールアドレス</th>
+                                        <th>件名</th>
+                                        <th>送信日時 (JST)</th>
+                                        <th>ステータス</th>
+                                        <th>開封</th>
+                                        <th>開封日時 (JST)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trackingTableBody">
+                                    <!-- 追跡データがここに表示されます -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 メール送信・追跡システム</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 追跡データの取得と表示
+            function loadTrackingData() {
+                console.log('追跡データを読み込み中...');
+                
+                // 実際のAPIから追跡データを取得
+                return fetch('/api/email/status')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('APIレスポンス:', data);
+                        
+                        if (data.success) {
+                            const trackingData = data.tracking;
+                            
+                            // 統計データの更新
+                            const sentCount = trackingData.filter(item => item.status === 'sent').length;
+                            const openedCount = trackingData.filter(item => item.opened).length;
+                            const failedCount = trackingData.filter(item => item.status === 'failed').length;
+                            
+                            document.getElementById('sentCount').textContent = sentCount;
+                            document.getElementById('openedCount').textContent = openedCount;
+                            document.getElementById('failedCount').textContent = failedCount;
+                            
+                            console.log(`統計更新: 送信済み=${sentCount}, 開封済み=${openedCount}, 失敗=${failedCount}`);
+                            
+                            // テーブルの更新
+                            const tableBody = document.getElementById('trackingTableBody');
+                            tableBody.innerHTML = '';
+                            
+                            if (trackingData.length === 0) {
+                                const row = document.createElement('tr');
+                                row.innerHTML = '<td colspan="6" class="text-center text-muted">まだメールが送信されていません</td>';
+                                tableBody.appendChild(row);
+                                return;
+                            }
+                            
+                            trackingData.forEach(item => {
+                                const row = document.createElement('tr');
+                                
+                                // 日時のフォーマット（JSTに変換）
+                                function formatDateToJST(dateString) {
+                                    if (!dateString) return '-';
+                                    
+                                    try {
+                                        // ISO形式の日時文字列からDateオブジェクトを作成
+                                        const date = new Date(dateString);
+                                        
+                                        // 無効な日付チェック
+                                        if (isNaN(date.getTime())) {
+                                            return '-';
+                                        }
+                                        
+                                        // JSTで表示（Asia/Tokyoタイムゾーンを明示）
+                                        return date.toLocaleString('ja-JP', {
+                                            timeZone: 'Asia/Tokyo',
+                                            year: 'numeric',
+                                            month: '2-digit',
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit',
+                                            hour12: false  // 24時間表記
+                                        });
+                                    } catch (error) {
+                                        console.error('日時変換エラー:', error, 'Input:', dateString);
+                                        return '-';
+                                    }
+                                }
+                                
+                                const formattedSentDate = formatDateToJST(item.sent_at);
+                                const formattedOpenedDate = formatDateToJST(item.opened_at);
+                                
+                                // ステータスバッジのスタイル
+                                let statusBadge = '';
+                                if (item.status === 'sent') {
+                                    statusBadge = '<span class="badge bg-success">送信済み</span>';
+                                } else if (item.status === 'failed') {
+                                    statusBadge = '<span class="badge bg-danger">失敗</span>';
+                                }
+                                
+                                // 開封状態のスタイル
+                                let openedBadge = '';
+                                if (item.opened) {
+                                    openedBadge = '<span class="badge bg-success">開封済み</span>';
+                                } else {
+                                    openedBadge = '<span class="badge bg-secondary">未開封</span>';
+                                }
+                                
+                                row.innerHTML = `
+                                    <td>${item.email}</td>
+                                    <td>${item.subject}</td>
+                                    <td>${formattedSentDate}</td>
+                                    <td>${statusBadge}</td>
+                                    <td>${openedBadge}</td>
+                                    <td>${formattedOpenedDate}</td>
+                                `;
+                                
+                                tableBody.appendChild(row);
+                            });
+                        } else {
+                            console.error('データの取得に失敗しました:', data.error);
+                            const tableBody = document.getElementById('trackingTableBody');
+                            tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">データの取得に失敗しました</td></tr>';
+                            throw new Error(data.error || 'データの取得に失敗しました');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('APIエラー:', error);
+                        const tableBody = document.getElementById('trackingTableBody');
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">データの取得に失敗しました</td></tr>';
+                        
+                        // エラーを上位に再スローして、更新ボタンのfinallyが正常に動作するようにする
+                        throw error;
+                    });
+            }
+            
+            // 更新ボタンのイベント
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                console.log('更新ボタンがクリックされました');
+                
+                // ボタンを無効化してローディング状態を表示
+                const refreshBtn = document.getElementById('refreshBtn');
+                const originalHTML = refreshBtn.innerHTML;
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise rotating"></i> 更新中...';
+                
+                // データを読み込み
+                loadTrackingData()
+                    .then(() => {
+                        console.log('データの更新が成功しました');
+                    })
+                    .catch((error) => {
+                        console.error('データの更新中にエラーが発生しました:', error);
+                        // エラー時は赤いバッジを一時的に表示
+                        refreshBtn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> エラー';
+                        refreshBtn.classList.add('btn-danger');
+                        refreshBtn.classList.remove('btn-primary');
+                    })
+                    .finally(() => {
+                        // ボタンを元の状態に戻す
+                        setTimeout(() => {
+                            refreshBtn.disabled = false;
+                            refreshBtn.innerHTML = originalHTML;
+                            refreshBtn.classList.remove('btn-danger');
+                            refreshBtn.classList.add('btn-primary');
+                            console.log('更新ボタンが元の状態に戻りました');
+                        }, 1000);
+                    });
+            });
+            
+            // 初期データ読み込み
+            loadTrackingData()
+                .then(() => {
+                    console.log('初期データの読み込みが完了しました');
+                })
+                .catch((error) => {
+                    console.error('初期データの読み込みでエラーが発生しました:', error);
+                });
+            
+            // 5秒ごとに自動更新
+            setInterval(() => {
+                loadTrackingData()
+                    .catch((error) => {
+                        console.error('自動更新でエラーが発生しました:', error);
+                    });
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
