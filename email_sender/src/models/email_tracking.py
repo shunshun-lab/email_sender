@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from models.user import db
+from .user import db
 
 # JST（日本標準時）のタイムゾーン定義
 JST = timezone(timedelta(hours=9))

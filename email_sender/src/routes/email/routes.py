@@ -7,8 +7,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from flask import Blueprint, request, jsonify, current_app, url_for
 from datetime import datetime, timezone, timedelta
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from models.email_tracking import EmailTracking, db
-from routes.template.routes import replace_variables
+from ..template.routes import replace_variables
 
 email_bp = Blueprint('email', __name__)
 

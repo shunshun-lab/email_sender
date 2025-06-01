@@ -1,10 +1,15 @@
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# Add the src directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+sys.path.insert(0, current_dir)
 
 # Load environment variables
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+load_dotenv(os.path.join(parent_dir, '.env'))
 
 from flask import Flask, send_from_directory, render_template, request, jsonify
 from models.user import db
